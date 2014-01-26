@@ -1,7 +1,7 @@
-CFLAGS=-Wall -g
+CFLAGS=-Wall -g -lgmp
 
 all: acal.c
-	gcc acal.c -lgmp -o acal
+	gcc $(CFLAGS) acal.c -o acal
 clean:
 	rm -f acal
 

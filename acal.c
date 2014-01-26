@@ -1,24 +1,42 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <gmp.h>
+
+int read_number(mpz_t);
+void eat_blanks();
 
 int main(void)
 {
-    mpz_t sum, cur;
-    mpz_init(sum);
-    mpz_init(cur);
-    int bytes_read;
+    mpz_t prod, cur;
+    mpz_inits(prod, cur);
 
-    char c;
-    while((c = getchar()) != EOF)
-    {   ungetc(c, stdin);
-        if (bytes_read = mpz_inp_str(cur, NULL, 10))
-        {   printf("bytes read: %d\n", bytes_read);
-            gmp_printf("%Zd\n", cur);
-            mpz_add(sum, sum, cur);
-            gmp_printf("running sum: %Zd\n", sum);
-        } else break;
-    }
+    mpz_set_ui(prod, 1);
+    int r;
+    while((r = read_number(cur)) && r != EOF)
+        mpz_mul(prod, prod, cur);
 
-    gmp_printf("final sum: %Zd\n", sum);
+    gmp_printf("%Zd\n", prod);
     return 0;
+}
+
+void eat_blanks() /* is it really necessary? */
+{
+    int c;
+    while((c = getc(stdin)) != EOF)
+        if (!isblank(c))
+        {   ungetc(c, stdin);
+            break;
+        }
+}
+
+int read_number(mpz_t num /* must be initialized */)
+{
+    int c, r;
+
+    if ((c = getc(stdin)) != EOF)
+    {   ungetc(c, stdin);
+        r = mpz_inp_str(num, NULL, 10);
+        return r;
+    }
+    return EOF;
 }
