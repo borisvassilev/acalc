@@ -1,5 +1,7 @@
 CFLAGS=-Wall -g
 
-clean :
+all: acal.c
+	gcc acal.c -lgmp -o acal
+clean:
 	rm -f acal
 
