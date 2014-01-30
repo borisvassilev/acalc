@@ -1,12 +1,15 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 #include <gmp.h>
+
+#include "numlist.h"
 
 int read_number(mpz_t);
 int eat_space_to_nl(FILE *);
 int read_line(FILE *);
 int echo_line(FILE *);
-int read_num_line(FILE *);
+int read_num_line(FILE *, struct numlist *);
 void trailing_error(FILE *, int);
 
 int main(void)
@@ -28,7 +31,15 @@ int read_line(FILE *stream)
         r = -1;
     else if (isdigit(c)) { /* num line */
         ungetc(c, stream);
-        r = read_num_line(stream);
+        struct numlist nl;
+        r = read_num_line(stream, &nl);
+
+        size_t i;
+        for (i = 0; i < nl.len; ++i)
+            gmp_printf("%Qd\n", nl.buf[i]);
+
+        numlist_release(&nl);
+
     } else if (c == '\n') { /* empty line */
         putc('\n', stdout);
         r = 0;
@@ -54,30 +65,32 @@ int echo_line(FILE *stream)
 /* Read numbers separated by blanks up to end of line
  * or end of file.
  */
-int read_num_line(FILE *stream)
+int read_num_line(FILE *stream, struct numlist *nl)
 {
-    mpz_t num;
-    mpz_init(num);
+    mpq_t num;
+    mpq_init(num);
 
     /* there is at least one digit in stream */
-    mpz_inp_str(num, stream, 10);
-    gmp_printf("%Zd", num);
+    mpq_inp_str(num, stream, 10);
+    mpq_canonicalize(num);
+    numlist_first(nl, num);
 
     int c;
     int i = 0;
     while ((c = eat_space_to_nl(stream)) != '\n' && c != EOF)
         if (isdigit(c)) {
             ungetc(c, stream);
-            mpz_inp_str(num, stream, 10);
+            mpq_inp_str(num, stream, 10);
+            mpq_canonicalize(num);
+            numlist_push(nl, num);
             ++i;
-            gmp_printf(" %Zd", num);
         } else {
             trailing_error(stream, c);
             break;
         }
 
-    putc('\n', stdout);
-    mpz_clear(num);
+    mpq_clear(num);
+
     return i;
 }
 
@@ -113,10 +126,6 @@ int eat_space_to_nl(FILE *stream)
     while ((c = getc(stream)) != EOF)
         if (!isspace(c) || c == '\n')
             return c;
-        /* for debugging */
-        else
-            putc('.', stdout);
-        /* */
     return EOF;
 }
 
