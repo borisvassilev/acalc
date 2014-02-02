@@ -1,7 +1,7 @@
 CFLAGS=-Wall -g -lgmp
 
-all: acal.c numlist.c
-	gcc $(CFLAGS) acal.c numlist.c -o acal
+all: acal.c numlist.c read.c
+	gcc $(CFLAGS) acal.c read.c numlist.c -o acal
 clean:
 	rm -f acal
 

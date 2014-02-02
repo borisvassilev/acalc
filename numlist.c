@@ -7,6 +7,7 @@ void numlist_first(struct numlist *nl, const mpq_t first)
     nl->alloc = nl->len = 1;
     mpq_init(nl->buf[0]);
     mpq_set(nl->buf[0], first);
+    mpq_canonicalize(nl->buf[0]);
 }
 
 void numlist_push(struct numlist *nl, const mpq_t num)
@@ -16,6 +17,7 @@ void numlist_push(struct numlist *nl, const mpq_t num)
 
     mpq_init(nl->buf[nl->len]);
     mpq_set(nl->buf[nl->len], num);
+    mpq_canonicalize(nl->buf[nl->len]);
     nl->len++;
 }
 
@@ -33,4 +35,13 @@ void numlist_release(struct numlist *nl)
         mpq_clear(nl->buf[i]);
 
     free(nl->buf);
+}
+
+size_t numlist_print(struct numlist *nl)
+{
+    size_t i;
+    for (i = 0; i < nl->len - 1; ++i)
+        gmp_printf("%Qd ", nl->buf[i]);
+    gmp_printf("%Qd\n", nl->buf[i]);
+    return ++i;
 }
