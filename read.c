@@ -32,13 +32,18 @@ int read_line()
         ungetc(c, stdin);
         if (read_num_line('+') > 0)
             return 1;
+        else return 0;
     }
     if (c == '+' || c == '-') { /* operator or sign? */
         int next = getc(stdin);
         ungetc(next, stdin);
-        if (isdigit(next)) /* maybe a number */
+        if (isdigit(next)) { /* maybe a number */
             if (read_num_line(c) > 0)
                 return 1;
+            else
+                return 0;
+        }
+
     }
     return read_line_firstc(c);
 }
@@ -46,11 +51,9 @@ int read_line()
 int read_line_firstc(const int c)
 {
     if (c == '\n') { /* empty line */
-        putc('\n', stdout);
         return 0;
     }
     if (c == '#') { /* comment */
-        putc('\n', stdout);
         eat_trailing_chars();
         return 0;
     }
@@ -145,10 +148,13 @@ size_t read_num_line(const int first_sign)
     if (read_num_sign(first_sign) > 0) {
         struct numlist *nl;
         nl = (struct numlist *) xmalloc(sizeof (struct numlist));
+        mpq_canonicalize(num);
         numlist_first(nl, num);
 
-        for (ret = 1; read_num() > 0; ++ret)
+        for (ret = 1; read_num() > 0; ++ret) {
+            mpq_canonicalize(num);
             numlist_push(nl, num);
+        }
 
         numlist_print(nl);
         numlist_release(nl);
@@ -166,6 +172,10 @@ int read_num()
     int c = eat_space_to_nl();
     if (c == '\n' || c == EOF)
         return 0;
+    if (c == '#') { /* comment to end of line */
+        eat_trailing_chars();
+        return 0;
+    }
 
     if (c == '+' || c == '-') {
         int next = getc(stdin);
@@ -176,6 +186,7 @@ int read_num()
         ungetc(c, stdin);
         return read_num_sign('+');
     }
+
     trailing_error(c);
     return 0;
 }

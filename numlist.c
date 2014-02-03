@@ -7,7 +7,6 @@ void numlist_first(struct numlist *nl, const mpq_t first)
     nl->alloc = nl->len = 1;
     mpq_init(nl->buf[0]);
     mpq_set(nl->buf[0], first);
-    mpq_canonicalize(nl->buf[0]);
 }
 
 void numlist_push(struct numlist *nl, const mpq_t num)
@@ -17,7 +16,6 @@ void numlist_push(struct numlist *nl, const mpq_t num)
 
     mpq_init(nl->buf[nl->len]);
     mpq_set(nl->buf[nl->len], num);
-    mpq_canonicalize(nl->buf[nl->len]);
     nl->len++;
 }
 
