@@ -111,7 +111,7 @@ void eat_trailing_chars()
 /*
  * gmp variables to be reused throughout the program run
  */
-mpq_t num;
+struct number num;
 mpz_t nums, numsb, numsbn;
 
 /*
@@ -119,7 +119,7 @@ mpz_t nums, numsb, numsbn;
  */
 void init_read()
 {
-    mpq_init(num);
+    mpq_init(num.num);
     mpz_init(nums);
     mpz_init(numsb);
     mpz_init(numsbn);
@@ -130,7 +130,7 @@ void init_read()
  */
 void finalize_read()
 {
-    mpq_clear(num);
+    mpq_clear(num.num);
     mpz_clear(nums);
     mpz_clear(numsb);
     mpz_clear(numsbn);
@@ -148,11 +148,11 @@ size_t read_num_line(const int first_sign)
     if (read_num_sign(first_sign) > 0) {
         struct numlist *nl;
         nl = (struct numlist *) xmalloc(sizeof (struct numlist));
-        mpq_canonicalize(num);
+        mpq_canonicalize(num.num);
         numlist_first(nl, num);
 
         for (ret = 1; read_num() > 0; ++ret) {
-            mpq_canonicalize(num);
+            mpq_canonicalize(num.num);
             numlist_push(nl, num);
         }
 
@@ -205,10 +205,12 @@ int read_num_sign(const int sign)
 
     if (c == EOF || isspace(c)) { /* it was an integer without base */
         ungetc(c, stdin);
-        mpz_set(mpq_numref(num), nums);
-        mpz_set_ui(mpq_denref(num), 1);
+        num.type = INTEGER;
+        num.base = 10;
+        mpz_set(mpq_numref(num.num), nums);
+        mpz_set_ui(mpq_denref(num.num), 1);
         if (sign == '-')
-            mpq_neg(num, num);
+            mpq_neg(num.num, num.num);
         return 1;
     }
 
@@ -216,6 +218,7 @@ int read_num_sign(const int sign)
         if (mpz_cmp_ui(nums,  1) > 0
          && mpz_cmp_ui(nums, 63) < 0) {
             int base = mpz_get_si(nums);
+            num.base = base;
             return read_num_sign_base(sign, base);
         }
     }
@@ -242,10 +245,11 @@ int read_num_sign_base(const int sign, const int base)
 
     if (c == EOF || isspace(c)) { /* it was integer in that base */
         ungetc(c, stdin);
-        mpz_set(mpq_numref(num), numsb);
-        mpz_set_ui(mpq_denref(num), 1);
+        num.type = INTEGER;
+        mpz_set(mpq_numref(num.num), numsb);
+        mpz_set_ui(mpq_denref(num.num), 1);
         if (sign == '-')
-            mpq_neg(num, num);
+            mpq_neg(num.num, num.num);
         return 1;
     }
 
@@ -270,10 +274,11 @@ int read_num_sign_base_numer(const int sign, const int base, const mpz_t numer)
 
     if (c == EOF || isspace(c)) { /* number parsing complete */
         ungetc(c, stdin);
-        mpz_set(mpq_numref(num), numer);
-        mpz_set(mpq_denref(num), numsbn);
+        num.type = RATIONAL;
+        mpz_set(mpq_numref(num.num), numer);
+        mpz_set(mpq_denref(num.num), numsbn);
         if (sign == '-')
-            mpq_neg(num, num);
+            mpq_neg(num.num, num.num);
         return 1;
     }
 
