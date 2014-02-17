@@ -4,13 +4,19 @@
 enum number_t {
     INTEGER,
     RATIONAL,
-    FRACTION
+    REAL,
+    NA
+};
+
+union number_u {
+    mpz_t integer;
+    mpq_t rational;
+    mpq_t real;
 };
 
 struct number {
     enum number_t type;
-    unsigned int base;
-    mpq_t num;
+    union number_u num;
 };
 
 struct numlist {
@@ -19,8 +25,8 @@ struct numlist {
     struct number *buf;
 };
 
-void numlist_first(struct numlist *, const struct number);
-void numlist_push(struct numlist *, const struct number);
+void numlist_first(struct numlist *, const enum number_t);
+void numlist_push(struct numlist *, const enum number_t);
 void numlist_grow(struct numlist *);
 void numlist_release(struct numlist *);
 size_t numlist_print(struct numlist *);
