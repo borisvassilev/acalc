@@ -25,8 +25,8 @@ struct numlist {
     struct number *buf;
 };
 
-void numlist_first(struct numlist *, const enum number_t);
-void numlist_push(struct numlist *, const enum number_t);
+void numlist_first(struct numlist *, const enum number_t, char *numstr);
+void numlist_push(struct numlist *, const enum number_t, char *numstr);
 void numlist_grow(struct numlist *);
 void numlist_release(struct numlist *);
 size_t numlist_print(struct numlist *);

@@ -2,18 +2,18 @@
 #include "memwrap.h"
 #include "numlist.h"
 
-void num_init_set(struct number *np, const enum number_t type, FILE *input)
+void num_init_set(struct number *np, const enum number_t type, const char *numstr)
 {
     np->type = type;
     switch (type) {
     case INTEGER:
         mpz_init(np->num.integer);
-        mpz_inp_str(np->num.integer, input, 10);
-        return;
+        mpz_set_str(np->num.integer, numstr, 10);
+        break;
     case RATIONAL:
     case REAL:
     case NA:
-        return;
+        break;
     }
 }
 
@@ -52,19 +52,19 @@ void num_print(struct number *np)
     }
 }
 
-void numlist_first(struct numlist *nl, const enum number_t type)
+void numlist_first(struct numlist *nl, const enum number_t type, char *numstr)
 {
     nl->buf = xmalloc(sizeof (struct number));
     nl->alloc = nl->len = 1;
-    num_init_set(nl->buf, type, stdin);
+    num_init_set(nl->buf, type, numstr);
 }
 
-void numlist_push(struct numlist *nl, const enum number_t type)
+void numlist_push(struct numlist *nl, const enum number_t type, char *numstr)
 {
     if (nl->len == nl->alloc)
         numlist_grow(nl);
 
-    num_init_set(nl->buf + nl->len, type, stdin);
+    num_init_set(nl->buf + nl->len, type, numstr);
     nl->len++;
 }
 

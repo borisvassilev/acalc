@@ -8,9 +8,9 @@ acal: $(objects)
 
 main.o: main.c read.h
 
-read.o: read.c read.h numlist.h numlist.c memwrap.h
+read.o: read.c read.h numlist.h numlist.c
 
-numlist.o: numlist.c read.h numlist.h memwrap.h
+numlist.o: numlist.c numlist.h memwrap.h
 
 .PHONY: clean
 clean:

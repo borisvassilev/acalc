@@ -5,20 +5,44 @@
 
 #include "read.h"
 #include "numlist.h"
-#include "memwrap.h"
 
 int read_line();
+enum token_t get_token();
 size_t read_num_line();
 int read_num();
 int eat_space_to_nl();
 int eat_char_to_nl();
 
-int peek()
+char *tokenstr;
+size_t tokensize;
+FILE *tokenbuf;
+
+void init_read()
 {
-    int c = getc(stdin);
-    ungetc(c, stdin);
-    return c;
+    tokenbuf = open_memstream(&tokenstr, &tokensize);
+    fflush(tokenbuf);
 }
+
+void finalize_read()
+{
+    fclose(tokenbuf);
+    free(tokenstr);
+}
+
+enum token_t {
+    INTEGER_STR,
+    RATIONAL_STR,
+    REAL_STR,
+    PLUS,
+    MINUS,
+    /* and so on... */
+
+    END_OF_LINE,
+    END_OF_FILE,
+
+    BAD_TOKEN,
+    TOKEN_ERROR
+};
 
 /*
  * Read a line from input, return positive value if meaningful
@@ -28,19 +52,157 @@ int peek()
 int read_line()
 {
     int ret = 0;
-    int c = eat_space_to_nl();
 
-    if (c == EOF)
-        return -1;
-    if (c == '\n') /* empty line */
-        return 0;
+    enum token_t token = get_token();
 
-    if (isdigit(c)) {
-        ungetc(c, stdin);
-        ret = read_num_line();
+    switch (token) {
+
+
+    case INTEGER_STR:
+    case RATIONAL_STR:
+    case REAL_STR:
+        ret = read_num_line(token);
+        break;
+    /* and so on... */
+
+    case END_OF_LINE:
+        ret = 0;
+        break;
+    case END_OF_FILE:
+        ret = -1;
+        break;
+
+    case BAD_TOKEN:
+        ret = -2;
+        break;
+    case TOKEN_ERROR:
+        ret = -3;
+        break;
+    default:
+        ret = -100;
+        break;
     }
 
     return ret;
+}
+
+enum state_t {
+    START,
+    LEADING_PLUS,
+    LEADING_MINUS,
+    FIRST_DIGITS,
+    RAT_DIV,
+    DEC_POINT
+    /* and so on... */
+
+};
+
+int is_token_end(int c)
+{
+    if (c == '\n') {
+        ungetc('\n', stdin);
+        return 1;
+    }
+    if (c == EOF)
+        return 1;
+    if (isspace(c))
+        return 1;
+
+    return 0;
+}
+
+enum token_t get_token()
+{
+    enum token_t token = BAD_TOKEN;
+    enum state_t state = START;
+
+    int c = eat_space_to_nl();
+
+    for (;;) {
+
+        switch (state) {
+        case START:
+            if (c == '+')
+                state = LEADING_PLUS;
+            else if (c == '-')
+                state = LEADING_MINUS;
+            else if (isdigit(c))
+                state = FIRST_DIGITS;
+            /* and so on... */
+
+            else if (c == '\n') {
+                token = END_OF_LINE;
+                goto token_end;
+            } else if (c == EOF) {
+                token = END_OF_FILE;
+                goto token_end;
+            }
+
+            else
+                goto token_end;
+
+            break;
+
+        case LEADING_PLUS:
+            if (is_token_end(c)) {
+                token = PLUS;
+                goto token_end;
+            } else if (isdigit(c)) {
+                /* delete leading plus from buffer! */
+                fseeko(tokenbuf, 0, SEEK_SET);
+                state = FIRST_DIGITS;
+            }
+            /* and so on */
+
+            else
+                goto token_end;
+
+            break;
+
+        case LEADING_MINUS:
+            if (is_token_end(c)) {
+                token = MINUS;
+                goto token_end;
+            } else if (isdigit(c))
+                state = FIRST_DIGITS;
+            /* and so on */
+
+            else
+                goto token_end;
+            break;
+
+        case FIRST_DIGITS:
+            if (isdigit(c))
+                ;
+            else if (is_token_end(c)) {
+                token = INTEGER_STR;
+                goto token_end;
+            } else if (c == '/')
+                state = RAT_DIV;
+            else if (c == '.')
+                state = DEC_POINT;
+            /* and so on */
+
+            else
+                goto token_end;
+
+            break;
+
+        /* and so on... */
+
+        default:
+            token = TOKEN_ERROR;
+            goto token_end;
+        }
+
+        putc(c, tokenbuf);
+        c = getc(stdin);
+    }
+    
+    /* clean up */
+token_end:
+    fflush(tokenbuf);
+    return token;
 }
 
 /*
@@ -48,48 +210,62 @@ int read_line()
  * or end of file. First sign (+ or -) passed as argument.
  * Return number of numbers read.
  */
-size_t read_num_line()
+size_t read_num_line(enum token_t token)
 {
     size_t ret = 0;
 
-    struct numlist *nl;
-    nl = (struct numlist *) xmalloc(sizeof (struct numlist));
-    numlist_first(nl, INTEGER);
+    struct numlist nl;
 
-    for (ret = 1; read_num() > 0; ++ret) {
-        numlist_push(nl, INTEGER);
+    switch (token) {
+    
+    case INTEGER_STR:
+        numlist_first(&nl, INTEGER, tokenstr);
+        break;
+
+    default:
+        goto num_line_end;
+    }
+    fseeko(tokenbuf, 0, SEEK_SET);
+
+    ret = 1;
+    while (ret <= (size_t) -1) {
+        token = get_token();
+        switch (token) {
+        case INTEGER_STR:
+            numlist_push(&nl, INTEGER, tokenstr);
+            break;
+
+        case END_OF_LINE:
+        case END_OF_FILE:
+            goto num_line_end;
+        default:
+            ret = 0;
+            goto num_line_end;
+        }
+        ++ret;
+        fseeko(tokenbuf, 0, SEEK_SET);
     }
 
-    numlist_print(nl);
-    numlist_release(nl);
-    free(nl);
+num_line_end:
+    fseeko(tokenbuf, 0, SEEK_SET);
+
+    if (ret)
+        numlist_print(&nl);
+
+    numlist_release(&nl);
 
     return ret;
 }
 
 /*
- * Read a number and put it into the global `mpq_t num`.
- * Return a positive value if a number was read and 0 otherwise.
- */
-int read_num()
-{
-    int c = eat_space_to_nl();
-    if (!isdigit(c))
-        return 0;
-    ungetc(c, stdin);
-    return 1;
-}
-
-/*
  * Consume white characters up to end of line and return the
- * first non-blank character
+ * first non-blank character. Also consume comments.
  */
 int eat_space_to_nl()
 {
     int c;
-    while ((c = getc(stdin)) != EOF)
-        if (!isspace(c) || c == '\n')
-            break;
+    while ((c = getc(stdin)) != EOF && c != '\n' && isspace(c))
+        ;
 
     if (c == '#') /* rest of the line is a comment */
         c = eat_char_to_nl();
@@ -142,11 +318,4 @@ void trailing_error(int c)
 }
  */
 
-void init_read()
-{
-}
-
-void finalize_read()
-{
-}
 
