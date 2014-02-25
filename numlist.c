@@ -2,15 +2,24 @@
 #include "memwrap.h"
 #include "numlist.h"
 
-void num_init_set(struct number *np, const enum number_t type, const char *numstr)
+void num_init_set(struct number *np, const enum number_t type, char *numstr)
 {
     np->type = type;
+
+    /* skip leading plus */
+    if (*numstr == '+')
+        numstr += 1;
+
     switch (type) {
     case INTEGER:
-        mpz_init(np->num.integer);
-        mpz_set_str(np->num.integer, numstr, 10);
+        mpz_init(np->num.z);
+        mpz_set_str(np->num.z, numstr, 10);
         break;
     case RATIONAL:
+        mpq_init(np->num.q);
+        mpq_set_str(np->num.q, numstr, 10);
+        mpq_canonicalize(np->num.q);
+        break;
     case REAL:
     case NA:
         break;
@@ -21,13 +30,13 @@ void num_clear(struct number *np)
 {
     switch (np->type) {
     case INTEGER:
-        mpz_clear(np->num.integer);
+        mpz_clear(np->num.z);
         return;
     case RATIONAL:
-        mpq_clear(np->num.rational);
+        mpq_clear(np->num.q);
         return;
     case REAL:
-        mpq_clear(np->num.real);
+        mpq_clear(np->num.q);
         return;
     case NA:
         return;
@@ -38,13 +47,13 @@ void num_print(struct number *np)
 {
     switch (np->type) {
     case INTEGER:
-        gmp_printf("%Zd", np->num.integer);
+        gmp_printf("%Zd", np->num.z);
         return;
     case RATIONAL:
-        gmp_printf("%Qd", np->num.rational);
+        gmp_printf("%Qd", np->num.q);
         return;
     case REAL: /* to be done properly */
-        gmp_printf("%Qd", np->num.real);
+        gmp_printf("%Qd", np->num.q);
         return;
     case NA:
         printf("NA");
@@ -52,11 +61,13 @@ void num_print(struct number *np)
     }
 }
 
-void numlist_first(struct numlist *nl, const enum number_t type, char *numstr)
+void numlist_init(struct numlist **nl)/*, const enum number_t type, char *numstr)*/
 {
-    nl->buf = xmalloc(sizeof (struct number));
-    nl->alloc = nl->len = 1;
-    num_init_set(nl->buf, type, numstr);
+    *nl = (struct numlist *) xmalloc(sizeof (struct numlist));
+    (*nl)->alloc = 1;
+    (*nl)->buf = (struct number *) xmalloc(sizeof (struct number));
+    (*nl)->len = 0;
+    /* num_init_set((*nl)->buf, type, numstr); */
 }
 
 void numlist_push(struct numlist *nl, const enum number_t type, char *numstr)
@@ -82,6 +93,7 @@ void numlist_release(struct numlist *nl)
         num_clear(nl->buf + i);
 
     free(nl->buf);
+    free(nl);
 }
 
 size_t numlist_print(struct numlist *nl)

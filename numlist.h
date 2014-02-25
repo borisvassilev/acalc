@@ -9,9 +9,8 @@ enum number_t {
 };
 
 union number_u {
-    mpz_t integer;
-    mpq_t rational;
-    mpq_t real;
+    mpz_t z;
+    mpq_t q;
 };
 
 struct number {
@@ -25,7 +24,7 @@ struct numlist {
     struct number *buf;
 };
 
-void numlist_first(struct numlist *, const enum number_t, char *numstr);
+void numlist_init(struct numlist **)/*, const enum number_t, char *numstr)*/;
 void numlist_push(struct numlist *, const enum number_t, char *numstr);
 void numlist_grow(struct numlist *);
 void numlist_release(struct numlist *);
