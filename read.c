@@ -5,6 +5,7 @@
 
 #include "read.h"
 #include "numlist.h"
+#include "numstack.h"
 #include "memwrap.h"
 
 int read_line();
@@ -60,27 +61,35 @@ void buf_reset()
     buf.str[0] = '\0';
 }
 
+struct numstack *ns;
+
 void init_read()
 {
     buf_init();
+    numstack_init(&ns);
 }
 
 void finalize_read()
 {
     buf_free();
+    numstack_release(ns);
 }
 
-int is_token_end(int c)
+int is_number_start(int c, int *last)
 {
-    if (c == '\n') {
-        ungetc('\n', stdin);
+    if (c == '+' || c == '-') {
+        buf_putc(c);
+        c = getc(stdin);
+        *last = c;
+        if (isdigit(c))
+            return 1;
+    } else if (isdigit(c)) {
+        *last = c;
         return 1;
     }
-    if (isspace(c) || c == EOF)
-        return 1;
-
     return 0;
 }
+
 /*
  * Read a line from input
  */
@@ -88,22 +97,12 @@ int read_line()
 {
     int ret = 0;
     int c = eat_space_to_eol(' '); 
+    int next;
     
-    if (c == '+' || c == '-') {
-
-        buf_putc(c);
-        c = getc(stdin);
-        
-        if (isdigit(c)) {
-            ret = read_num_line(c);
-        } else { /* TODO: operator */
-            ;
-        }
-    } else if (isdigit(c)) {
-        ret = read_num_line(c);
-    } else { /* TODO: another kind of token */
+    if (is_number_start(c, &next))
+        ret = read_num_line(next);
+    else /* TODO: another kind of token */
         ;
-    }
     
     return ret;
 }
@@ -114,26 +113,27 @@ int read_num_line(int c)
     numlist_init(&nl);
 
     int success = 1;
-    while ((c = read_num(c, nl, &success)) != '\n' && c != EOF)
+    while ((c = read_num(c, nl, &success)) != '\n' && c != EOF) {
         if (!success) {
 
     numlist_release(nl);
 
             return 0;
         }
+    }
 
-    numlist_print(nl);
-    numlist_release(nl);
+    numstack_push(ns, nl);
     return 1;
 }
 
 int read_num(int c, struct numlist *nl, int *success)
 {
-    if (!isdigit(c)) {
+    int next;
+    if (!is_number_start(c, &next)) {
         *success = 0;
-        return c;
+        return next;
     }
-    c = buf_digits(c);
+    c = buf_digits(next);
 
     if (isspace(c) || c == EOF) { /* an integer */
         buf_terminate();

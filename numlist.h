@@ -1,6 +1,8 @@
 #ifndef NUMLIST_H
 #define NUMLIST_H
 
+#include "gmp.h"
+
 enum number_t {
     INTEGER,
     RATIONAL,
@@ -24,7 +26,7 @@ struct numlist {
     struct number *buf;
 };
 
-void numlist_init(struct numlist **)/*, const enum number_t, char *numstr)*/;
+void numlist_init(struct numlist **);
 void numlist_push(struct numlist *, const enum number_t, char *numstr);
 void numlist_grow(struct numlist *);
 void numlist_release(struct numlist *);
