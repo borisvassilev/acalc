@@ -9,6 +9,7 @@
 #include "memwrap.h"
 
 int read_line();
+int action(int);
 int read_num_line(int);
 int read_num(int, struct numlist *, int *);
 int read_denumerator(int, struct numlist *, int *);
@@ -75,18 +76,13 @@ void finalize_read()
     numstack_release(ns);
 }
 
-int is_number_start(int *c)
+int buffer_leading_sign(int c)
 {
-    if (*c == '+' || *c == '-') {
-        buf_putc(*c);
-        *c = getc(stdin);
-        if (isdigit(*c))
-            return 1;
-    } else {
-        if (isdigit(*c))
-            return 1;
+    if (c == '+' || c == '-') {
+        buf_putc(c);
+        c = getc(stdin);
     }
-    return 0;
+    return c;
 }
 
 /*
@@ -96,13 +92,24 @@ int read_line()
 {
     int ret = 0;
     int c = eat_space_to_eol(' '); 
+
+    if (c == '\n')
+        return 1;
+    if (c == EOF)
+        return 0;
     
-    if (is_number_start(&c))
+    c = buffer_leading_sign(c);
+    if (isdigit(c))
         ret = read_num_line(c);
-    else /* TODO: another kind of token */
-        ; /*ret = operation(c);*/
+    else
+        ret = action(c);
     
     return ret;
+}
+
+int action(int c)
+{
+    return 0;
 }
 
 int read_num_line(int c)
@@ -113,9 +120,7 @@ int read_num_line(int c)
     int success = 1;
     while ((c = read_num(c, nl, &success)) != '\n' && c != EOF) {
         if (!success) {
-
-    numlist_release(nl);
-
+            numlist_release(nl);
             return 0;
         }
     }
@@ -124,20 +129,26 @@ int read_num_line(int c)
     return 1;
 }
 
+int end_number(int c, struct numlist *nl, const enum number_t nt)
+{
+    buf_terminate();
+    numlist_push(nl, nt, buf.str);
+    buf_reset();
+    c = eat_space_to_eol(c);
+    return buffer_leading_sign(c);
+}
+
 int read_num(int c, struct numlist *nl, int *success)
 {
-    if (!is_number_start(&c)) {
+    if (!isdigit(c)) {
         *success = 0;
         return c;
-    }
-    c = buf_digits(c);
+    } else
+        c = buf_digits(c);
 
-    if (isspace(c) || c == EOF) { /* an integer */
-        buf_terminate();
-        numlist_push(nl, INTEGER, buf.str);
-        buf_reset();
-        c = eat_space_to_eol(c);
-    } else if (c == '/') { /* maybe rational */
+    if (isspace(c) || c == EOF) /* an integer */
+        c = end_number(c, nl, INTEGER);
+    else if (c == '/') { /* maybe rational */
         buf_putc(c);
         c = getc(stdin);
         if (isdigit(c))
@@ -156,10 +167,7 @@ int read_denumerator(int c, struct numlist *nl, int *success)
     c = buf_digits(c);
 
     if (isspace(c) || c == EOF) { /* a rational */
-        buf_terminate();
-        numlist_push(nl, RATIONAL, buf.str);
-        buf_reset();
-        c = eat_space_to_eol(c);
+        c = end_number(c, nl, RATIONAL);
     } else
         *success = 0;
 

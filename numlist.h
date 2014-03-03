@@ -24,6 +24,7 @@ struct numlist {
     size_t alloc;
     size_t len;
     struct number *buf;
+    mpq_t tmpq;
 };
 
 void numlist_init(struct numlist **);

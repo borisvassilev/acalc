@@ -2,24 +2,38 @@
 #include "memwrap.h"
 #include "numlist.h"
 
-void num_init_set(struct number *np, const enum number_t type, char *numstr)
+void num_init_set(
+        struct number *np,
+        const enum number_t type,
+        char *numstr,
+        mpq_t tmpq)
 {
-    np->type = type;
-
     /* skip leading plus */
     if (*numstr == '+')
         numstr += 1;
 
     switch (type) {
+
     case INTEGER:
         mpz_init(np->num.z);
         mpz_set_str(np->num.z, numstr, 10);
+        np->type = INTEGER;
         break;
+
     case RATIONAL:
-        mpq_init(np->num.q);
-        mpq_set_str(np->num.q, numstr, 10);
-        mpq_canonicalize(np->num.q);
+        mpq_set_str(tmpq, numstr, 10);
+        mpq_canonicalize(tmpq);
+        if (mpz_cmp_ui(mpq_denref(tmpq), 1) == 0) {
+            mpz_init(np->num.z);
+            mpz_set(np->num.z, mpq_numref(tmpq));
+            np->type = INTEGER;
+        } else {
+            mpq_init(np->num.q);
+            mpq_set(np->num.q, tmpq);
+            np->type = RATIONAL;
+        }
         break;
+
     case REAL:
     case NA:
         break;
@@ -67,7 +81,7 @@ void numlist_init(struct numlist **nl)/*, const enum number_t type, char *numstr
     (*nl)->alloc = 1;
     (*nl)->buf = (struct number *) xmalloc(sizeof (struct number));
     (*nl)->len = 0;
-    /* num_init_set((*nl)->buf, type, numstr); */
+    mpq_init((*nl)->tmpq);
 }
 
 void numlist_push(struct numlist *nl, const enum number_t type, char *numstr)
@@ -75,7 +89,7 @@ void numlist_push(struct numlist *nl, const enum number_t type, char *numstr)
     if (nl->len == nl->alloc)
         numlist_grow(nl);
 
-    num_init_set(nl->buf + nl->len, type, numstr);
+    num_init_set(nl->buf + nl->len, type, numstr, nl->tmpq);
     nl->len++;
 }
 
@@ -93,6 +107,7 @@ void numlist_release(struct numlist *nl)
         num_clear(nl->buf + i);
 
     free(nl->buf);
+    mpq_clear(nl->tmpq);
     free(nl);
 }
 
