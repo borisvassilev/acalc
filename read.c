@@ -83,9 +83,10 @@ int is_number_start(int c, int *last)
         *last = c;
         if (isdigit(c))
             return 1;
-    } else if (isdigit(c)) {
+    } else {
         *last = c;
-        return 1;
+        if (isdigit(c))
+            return 1;
     }
     return 0;
 }
