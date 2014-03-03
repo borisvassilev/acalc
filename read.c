@@ -75,17 +75,15 @@ void finalize_read()
     numstack_release(ns);
 }
 
-int is_number_start(int c, int *last)
+int is_number_start(int *c)
 {
-    if (c == '+' || c == '-') {
-        buf_putc(c);
-        c = getc(stdin);
-        *last = c;
-        if (isdigit(c))
+    if (*c == '+' || *c == '-') {
+        buf_putc(*c);
+        *c = getc(stdin);
+        if (isdigit(*c))
             return 1;
     } else {
-        *last = c;
-        if (isdigit(c))
+        if (isdigit(*c))
             return 1;
     }
     return 0;
@@ -98,12 +96,11 @@ int read_line()
 {
     int ret = 0;
     int c = eat_space_to_eol(' '); 
-    int next;
     
-    if (is_number_start(c, &next))
-        ret = read_num_line(next);
+    if (is_number_start(&c))
+        ret = read_num_line(c);
     else /* TODO: another kind of token */
-        ;
+        ; /*ret = operation(c);*/
     
     return ret;
 }
@@ -129,12 +126,11 @@ int read_num_line(int c)
 
 int read_num(int c, struct numlist *nl, int *success)
 {
-    int next;
-    if (!is_number_start(c, &next)) {
+    if (!is_number_start(&c)) {
         *success = 0;
-        return next;
+        return c;
     }
-    c = buf_digits(next);
+    c = buf_digits(c);
 
     if (isspace(c) || c == EOF) { /* an integer */
         buf_terminate();
