@@ -22,7 +22,13 @@ void num_init_set(
 
     case RATIONAL:
         mpq_set_str(tmpq, numstr, 10);
+        /* if the denumerator is 0, this is not a number */
+        if (mpz_cmp_ui(mpq_denref(tmpq), 0) == 0) {
+            np->type = NaN;
+            break;
+        }
         mpq_canonicalize(tmpq);
+        /* if the denumerator is 1, this is an integer */
         if (mpz_cmp_ui(mpq_denref(tmpq), 1) == 0) {
             mpz_init(np->num.z);
             mpz_set(np->num.z, mpq_numref(tmpq));
@@ -35,7 +41,15 @@ void num_init_set(
         break;
 
     case REAL:
+        mpq_init(np->num.q);
+        mpq_set_str(np->num.q, numstr, 10);
+        mpq_canonicalize(np->num.q);
+        np->type = REAL;
+        break;
+
     case NA:
+    case NaN:
+        np->type = type;
         break;
     }
 }
@@ -52,6 +66,7 @@ void num_clear(struct number *np)
     case REAL:
         mpq_clear(np->num.q);
         return;
+    case NaN:
     case NA:
         return;
     }
@@ -67,15 +82,19 @@ void num_print(struct number *np)
         gmp_printf("%Qd", np->num.q);
         return;
     case REAL: /* to be done properly */
-        gmp_printf("%Qd", np->num.q);
+
+        gmp_printf("~%Qd", np->num.q);
         return;
     case NA:
         printf("NA");
         return;
+    case NaN:
+        printf("NaN");
+        return;
     }
 }
 
-void numlist_init(struct numlist **nl)/*, const enum number_t type, char *numstr)*/
+void numlist_init(struct numlist **nl)
 {
     *nl = (struct numlist *) xmalloc(sizeof (struct numlist));
     (*nl)->alloc = 1;
@@ -84,7 +103,11 @@ void numlist_init(struct numlist **nl)/*, const enum number_t type, char *numstr
     mpq_init((*nl)->tmpq);
 }
 
-void numlist_push(struct numlist *nl, const enum number_t type, char *numstr)
+void
+numlist_push(
+        struct numlist *nl,
+        const enum number_t type,
+        char *numstr)
 {
     if (nl->len == nl->alloc)
         numlist_grow(nl);

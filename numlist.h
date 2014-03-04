@@ -7,6 +7,7 @@ enum number_t {
     INTEGER,
     RATIONAL,
     REAL,
+    NaN,
     NA
 };
 

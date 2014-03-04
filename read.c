@@ -13,6 +13,7 @@ int action(int);
 int read_num_line(int);
 int read_num(int, struct numlist *, int *);
 int read_denumerator(int, struct numlist *, int *);
+int read_fractional(int, size_t, struct numlist *, int *);
 int buf_digits(int);
 int eat_space_to_eol(int);
 int eat_char_to_eol(int);
@@ -129,7 +130,11 @@ int read_num_line(int c)
     return 1;
 }
 
-int end_number(int c, struct numlist *nl, const enum number_t nt)
+int
+end_number(
+        int c,
+        struct numlist *nl,
+        const enum number_t nt)
 {
     buf_terminate();
     numlist_push(nl, nt, buf.str);
@@ -138,7 +143,11 @@ int end_number(int c, struct numlist *nl, const enum number_t nt)
     return buffer_leading_sign(c);
 }
 
-int read_num(int c, struct numlist *nl, int *success)
+int
+read_num(
+        int c,
+        struct numlist *nl,
+        int *success)
 {
     if (!isdigit(c)) {
         *success = 0;
@@ -155,7 +164,14 @@ int read_num(int c, struct numlist *nl, int *success)
             c = read_denumerator(c, nl, success);
         else
             *success = 0;
-    } else { /* TODO: reals */
+    } else if (c == '.') { /* maybe real */
+        /* forget the dot; we deal with it otherwise */
+        c = getc(stdin);
+        if (isdigit(c))
+            c = read_fractional(c, buf.len, nl, success);
+        else
+            *success = 0;
+    } else {
         *success = 0;
     }
 
@@ -166,9 +182,31 @@ int read_denumerator(int c, struct numlist *nl, int *success)
 {
     c = buf_digits(c);
 
-    if (isspace(c) || c == EOF) { /* a rational */
+    if (isspace(c) || c == EOF) /* a rational */
         c = end_number(c, nl, RATIONAL);
-    } else
+    else
+        *success = 0;
+
+    return c;
+}
+
+int
+read_fractional(
+        int c,
+        const size_t start,
+        struct numlist *nl,
+        int *success)
+{
+    c = buf_digits(c);
+    size_t i = buf.len;
+    buf_putc('/');
+    buf_putc('1');
+    while (i-- > start)
+        buf_putc('0');
+
+    if (isspace(c) || c == EOF) /* a real without exponent */
+        c = end_number(c, nl, REAL);
+    else
         *success = 0;
 
     return c;
