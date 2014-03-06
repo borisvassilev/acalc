@@ -17,5 +17,6 @@ void strbuf_putc(struct strbuf_t *, const char);
 void strbuf_terminate(struct strbuf_t *);
 void strbuf_reset(struct strbuf_t *);
 size_t strbuf_len(struct strbuf_t *);
+char *strbuf_str(struct strbuf_t *, size_t);
 
 #endif /* STRBUF_H */
