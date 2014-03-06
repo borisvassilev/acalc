@@ -2,33 +2,22 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "globals.h"
 #include "read.h"
 #include "numlist.h"
-#include "state.h"
+#include "numstack.h"
 #include "memwrap.h"
 #include "strbuf.h"
 #include "exit_status.h"
 
-struct strbuf_t buf;
-
-void read_init()
-{
-    strbuf_init(&buf, 0);
-}
-
-void read_finalize()
-{
-    strbuf_free(&buf);
-}
-
 int eat_space_to_eol(int);
 int buffer_leading_sign(int);
-exit_status read_num_line(int, struct state_t *);
+exit_status read_num_line(int);
 exit_status action(int);
 /*
  * Read a line from input
  */
-exit_status read_line(struct state_t *s)
+exit_status read_line()
 {
     exit_status status;
     int c = eat_space_to_eol(' '); 
@@ -40,11 +29,11 @@ exit_status read_line(struct state_t *s)
     
     c = buffer_leading_sign(c);
     if (isdigit(c))
-        status = read_num_line(c, s);
+        status = read_num_line(c);
     else
         status = action(c);
     
-    strbuf_reinit(&buf, 0);
+    strbuf_reinit(&iobuf, 0);
 
     return status;
 }
@@ -52,7 +41,7 @@ exit_status read_line(struct state_t *s)
 int buffer_leading_sign(int c)
 {
     if (c == '+' || c == '-') {
-        strbuf_putc(&buf, c);
+        strbuf_putc(&iobuf, c);
         c = getc(stdin);
     }
     return c;
@@ -65,7 +54,7 @@ exit_status action(int c)
 
 exit_status read_num_rest(int, struct numlist_t *, int *);
 exit_status read_num(int, struct numlist_t *, int *);
-exit_status read_num_line(int c, struct state_t *s)
+exit_status read_num_line(int c)
 {
     struct numlist_t *nl;
     numlist_init(&nl);
@@ -79,7 +68,7 @@ exit_status read_num_line(int c, struct state_t *s)
         if (status != SUCCESS)
             goto fail;
     }
-    numstack_push(&(s->ns), nl);
+    numstack_push(&global_stack, nl);
     return SUCCESS;
 
 fail:
@@ -118,22 +107,22 @@ exit_status read_num_rest(
     if (isspace(c) || c == EOF) /* an integer */
         nt = INTEGER;
     else if (c == '/') { /* maybe rational */
-        strbuf_putc(&buf, '/');
+        strbuf_putc(&iobuf, '/');
         status = read_denumerator(next_c);
         nt = RATIONAL;
     } else if (c == '.') { /* maybe real */
         /* forget the dot; we deal with it otherwise */
-        status = read_fractional(strbuf_len(&buf), next_c);
+        status = read_fractional(strbuf_len(&iobuf), next_c);
         nt = REAL;
     } else
         status = INTEGER_TRAILING_CHARS;
 
     if (status == SUCCESS) {
-        strbuf_terminate(&buf);
-        numlist_push(nl, nt, buf.str);
+        strbuf_terminate(&iobuf);
+        numlist_push(nl, nt, iobuf.str);
     }
 
-    strbuf_reset(&buf);
+    strbuf_reset(&iobuf);
     return status;
 }
 
@@ -143,9 +132,9 @@ exit_status buf_digits(int c, int *next_c)
     if (!isdigit(c))
         return DIGIT_EXPECTED;
 
-    strbuf_putc(&buf, c);
+    strbuf_putc(&iobuf, c);
     while ((c = getc(stdin)) != EOF && isdigit(c))
-        strbuf_putc(&buf, c);
+        strbuf_putc(&iobuf, c);
     *next_c = c;
 
     return SUCCESS;
@@ -174,12 +163,12 @@ exit_status read_fractional(const size_t start, int *next_c)
     if (!isspace(*next_c) && *next_c != EOF)
         return REAL_FRAC_TRAILING_CHARS;
 
-    size_t i = strbuf_len(&buf);
+    size_t i = strbuf_len(&iobuf);
 
-    strbuf_putc(&buf, '/');
-    strbuf_putc(&buf, '1');
+    strbuf_putc(&iobuf, '/');
+    strbuf_putc(&iobuf, '1');
     while (--i >= start)
-        strbuf_putc(&buf, '0');
+        strbuf_putc(&iobuf, '0');
 
     return SUCCESS;
 }
