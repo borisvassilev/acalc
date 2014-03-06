@@ -3,6 +3,7 @@
 
 #include "memwrap.h"
 #include "tmpvars.h"
+#include "globals.h"
 
 #include "numlist.h"
 
@@ -73,21 +74,59 @@ void num_clear(struct number_t *np)
 void num_print(struct number_t *np)
 {
     switch (np->type) {
+
     case INTEGER:
         gmp_printf("%Zd", np->num.z);
         break;
+
     case RATIONAL:
         gmp_printf("%Qd", np->num.q);
         break;
+
     case REAL: /* to be done properly */
         mpz_tdiv_qr(mpz1, mpz2, mpq_numref(np->num.q), mpq_denref(np->num.q));
-        gmp_printf("%Zd", mpz1);
-        if (mpz_cmp_ui(mpz2, 0) != 0)
-            gmp_printf("|%Zd/%Zd", mpz2, mpq_denref(np->num.q));
+        if (mpz_cmp_ui(mpz2, 0) == 0) { /* remainder is 0 */
+            gmp_printf("%Zd", mpz1);
+            break;
+        }
+        size_t max_len =
+              mpz_sizeinbase(mpz1, 10) /* length of the string in digits */
+            + 1 /* '\0' terminator */
+            /* + 1  possible minus sign: not necessary */
+            + 1 /* leading 0 */
+            + 1 /* decimal point */
+            + real_precision + 1; /* precision and the extra digit */
+
+        strbuf_reset(&iobuf);
+        strbuf_grow(&iobuf, max_len);
+        char *str = strbuf_str(&iobuf, 0);
+
+        int negative = 0;
+        if (mpz_sgn(mpz1) == -1) /* negative number */
+            negative = 1;
+        mpz_abs(mpz1, mpz1);
+
+        *str++ = '0'; /* leading 0 */
+
+        str += gmp_sprintf(str, "%Zd", mpz1);
+        char *dec_point_pos = str; /* save the position for the point */
+
+        mpz_abs(mpz2, mpz2);
+        mpz_ui_pow_ui(mpz1, 10, real_precision + 1);
+        mpz_mul(mpz2, mpz2, mpz1);
+        mpz_tdiv_q(mpz2, mpz2, mpq_denref(np->num.q));
+        str += gmp_sprintf(str, "%Zd", mpz2);
+
+        if (negative)
+            putc('-', stdout);
+        printf("real%s", strbuf_str(&iobuf, 0));
+
         break;
+
     case NA:
         printf("NA");
         break;
+
     case NaN:
         printf("NaN");
         break;
