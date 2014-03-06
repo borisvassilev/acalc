@@ -2,7 +2,9 @@
 #include <stdlib.h>
 
 #include "memwrap.h"
+#include "globals.h"
 #include "tmpvars.h"
+#include "strbuf.h"
 
 #include "numlist.h"
 
