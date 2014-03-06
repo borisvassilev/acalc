@@ -33,6 +33,9 @@ exit_status read_line()
     else
         status = action(c);
     
+    /* in case we had a huge number on the line
+     * this will reclaim the memory
+     */
     strbuf_reinit(&iobuf, 0);
 
     return status;
@@ -119,7 +122,7 @@ exit_status read_num_rest(
 
     if (status == SUCCESS) {
         strbuf_terminate(&iobuf);
-        numlist_push(nl, nt, iobuf.str);
+        numlist_push(nl, nt, strbuf_str(&iobuf, 0));
     }
 
     strbuf_reset(&iobuf);

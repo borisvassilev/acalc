@@ -61,3 +61,11 @@ size_t strbuf_len(struct strbuf_t *sb)
 {
     return sb->len;
 }
+
+char *strbuf_str(struct strbuf_t *sb, size_t offset)
+{
+    if (offset > sb->len - 1)
+        offset = sb->len - 1;
+
+    return sb->str + offset;
+}

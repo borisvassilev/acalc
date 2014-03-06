@@ -139,5 +139,10 @@ size_t numlist_print(struct numlist_t *nl)
     num_print(nl->buf + i);
     putc('\n', stdout);
 
+    /* in case we had a huge number while printing
+     * this will reclaim the memory
+     */
+    strbuf_reinit(&iobuf, 0);
+
     return ++i;
 }
