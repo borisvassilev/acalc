@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "memwrap.h"
 #include "globals.h"
@@ -75,21 +76,113 @@ void num_clear(struct number_t *np)
 void num_print(struct number_t *np)
 {
     switch (np->type) {
+
     case INTEGER:
         gmp_printf("%Zd", np->num.z);
         break;
+
     case RATIONAL:
         gmp_printf("%Qd", np->num.q);
         break;
-    case REAL: /* to be done properly */
+
+    case REAL:
+        /* We might need to insert a digit between the sign
+         * and the rest of the number:
+         * deal with the sign explicitly
+         */
+        ;int negative = 0; /* semicolon at beginning of line */
+        if (mpz_sgn(mpq_numref(np->num.q)) == -1) /* negative number */
+            negative = 1;
+
+        /* Calculate the integer part and the remainder */
         mpz_tdiv_qr(mpz1, mpz2, mpq_numref(np->num.q), mpq_denref(np->num.q));
-        gmp_printf("%Zd", mpz1);
-        if (mpz_cmp_ui(mpz2, 0) != 0)
-            gmp_printf("|%Zd/%Zd", mpz2, mpq_denref(np->num.q));
+        if (mpz_cmp_ui(mpz2, 0) == 0) { /* remainder is 0 */
+            gmp_printf("%Zd", mpz1);
+            break;
+        }
+
+        /* What is the maximum possible length of the decimal fraction? */
+        size_t max_len =
+              mpz_sizeinbase(mpz1, 10) /* length of the string in digits */
+            + 1 /* '\0' terminator */
+            /* + 1  possible minus sign: dealing with it explicitly */
+            /* + 1  decimal point: dealing with it explicitly */
+            + real_precision + 1; /* precision and the extra digit */
+
+        /* Prepare the io buffer for the string */
+        strbuf_reset(&iobuf);
+        strbuf_grow(&iobuf, max_len);
+        char *end = strbuf_str(&iobuf, 0);
+
+        /* Write the integer part to the buffer */
+        mpz_abs(mpz1, mpz1);
+        end += gmp_sprintf(end, "%Zd", mpz1);
+        char *dec_point = end;
+
+        /* Calculate the fractional part and write it to the buffer:
+         * to round correctly, we need to know one more digit than
+         * the precision we are aiming at
+         */
+        mpz_abs(mpz2, mpz2);
+        mpz_ui_pow_ui(mpz1, 10, real_precision + 1);
+        mpz_mul(mpz2, mpz2, mpz1);
+        mpz_tdiv_q(mpz2, mpz2, mpq_denref(np->num.q));
+        end += gmp_sprintf(end, "%Zd", mpz2);
+        size_t extra_zeros = real_precision + 1 - (end - dec_point);
+
+        char *p = end - 1; /* position of the extra digit */
+        /* Do we need to round up or not? */
+        int roundup = 0;
+        if (*p > '4')
+            roundup = 1;
+
+        /* Propagate the round up back the string of digits */
+        while (roundup && p != strbuf_str(&iobuf, 0)) {
+            --p;
+            ++*p;
+            if (*p > '9')
+                *p = '0';
+            else
+                roundup = 0;
+        }
+
+        /* Move end back to the first non-zero of the fractional part */
+        p = end - 2; /* position of the last significant digit */
+        while (*p == '0' && p != dec_point - 1)
+            --p;
+        end = p + 1; /* the new end */
+
+        /* Output the number */
+        if (negative) /* minus sign */
+            putc('-', stdout);
+
+        if (roundup) /* overflow */
+            putc('1', stdout);
+
+        /* Integer part */
+        p = strbuf_str(&iobuf, 0);
+        while (p != dec_point) {
+            putc(*p, stdout);
+            ++p;
+        }
+        if (p == end) /* There is no fractional part after rounding */
+            break;
+
+        /* Fractional part */
+        putc('.', stdout);
+        while (extra_zeros-- != 0)
+            putc('0', stdout);
+        while (p != end) {
+            putc(*p, stdout);
+            ++p;
+        }
+
         break;
+
     case NA:
         printf("NA");
         break;
+
     case NaN:
         printf("NaN");
         break;
