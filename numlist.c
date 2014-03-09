@@ -9,6 +9,14 @@
 
 #include "numlist.h"
 
+void numlist_init(struct numlist_t **nl)
+{
+    *nl = (struct numlist_t *) xmalloc(sizeof (struct numlist_t));
+    (*nl)->alloc = 1;
+    (*nl)->buf = (struct number_t *) xmalloc(sizeof (struct number_t));
+    (*nl)->len = 0;
+}
+
 void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
 {
     /* skip leading plus */
@@ -57,6 +65,22 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
     }
 }
 
+void numlist_push(struct numlist_t *nl, const enum numtype_e nt, char *buf)
+{
+    if (nl->len == nl->alloc)
+        numlist_grow(nl);
+
+    num_init_set(nl->buf + nl->len, nt, buf);
+    nl->len++;
+}
+
+
+void numlist_grow(struct numlist_t *nl)
+{
+    nl->alloc = alloc_nr(nl->alloc);
+    nl->buf = xrealloc(nl->buf, nl->alloc * sizeof (struct number_t));
+}
+
 void num_clear(struct number_t *np)
 {
     switch (np->type) {
@@ -73,6 +97,16 @@ void num_clear(struct number_t *np)
     }
 }
 
+void numlist_release(struct numlist_t *nl)
+{
+    size_t i;
+    for (i = 0; i < nl->len; ++i)
+        num_clear(nl->buf + i);
+
+    free(nl->buf);
+    free(nl);
+}
+
 void num_print(struct number_t *np)
 {
     switch (np->type) {
@@ -87,18 +121,10 @@ void num_print(struct number_t *np)
 
     case DECFRAC:
         mpq_set(mpq1, np->num.q);  /* copy number */
-        int neg = 0;
-        if (mpq_sgn(mpq1) == -1) {
-            neg = 1;
+        if (mpq_sgn(mpq1) == -1) { /* negative number */
             putc('-', stdout);
-        }
-
-        mpz_ui_pow_ui(mpz1, 10, decfrac_prec);
-        mpz_mul_ui(mpz1, mpz1, 2);       /* 2*10^precision */
-        mpz_set_ui(mpq_numref(mpq2), 1); /* 1 */
-        mpz_set(mpq_denref(mpq2), mpz1); /* 1/(2*10^precision) */
-        if (neg) /* negative number */
             mpq_neg(mpq2, mpq2);
+        }
 
         mpq_add(mpq1, mpq1, mpq2); /* add 1/(2*10^precision) */
 
@@ -107,11 +133,9 @@ void num_print(struct number_t *np)
         gmp_printf("%Zd", mpz2); /* integer part */
 
         /* get fractional part */
-        mpz_mul_ui(mpz1, mpz1, 5); /* 10^(precision + 1) */
         mpz_mul(mpz3, mpz3, mpz1);
         mpz_tdiv_q(mpz3, mpz3, mpq_denref(mpq1));
 
-        strbuf_grow(&iobuf, decfrac_prec + 2);
         char *start = strbuf_str(&iobuf, 0); /* for convenience */
         size_t written = gmp_sprintf(start, "%Zd", mpz3);
         char *end = start + written - 1;
@@ -141,42 +165,23 @@ void num_print(struct number_t *np)
     }
 }
 
-void numlist_init(struct numlist_t **nl)
-{
-    *nl = (struct numlist_t *) xmalloc(sizeof (struct numlist_t));
-    (*nl)->alloc = 1;
-    (*nl)->buf = (struct number_t *) xmalloc(sizeof (struct number_t));
-    (*nl)->len = 0;
-}
-
-void numlist_push(struct numlist_t *nl, const enum numtype_e nt, char *buf)
-{
-    if (nl->len == nl->alloc)
-        numlist_grow(nl);
-
-    num_init_set(nl->buf + nl->len, nt, buf);
-    nl->len++;
-}
-
-
-void numlist_grow(struct numlist_t *nl)
-{
-    nl->alloc = alloc_nr(nl->alloc);
-    nl->buf = xrealloc(nl->buf, nl->alloc * sizeof (struct number_t));
-}
-
-void numlist_release(struct numlist_t *nl)
-{
-    size_t i;
-    for (i = 0; i < nl->len; ++i)
-        num_clear(nl->buf + i);
-
-    free(nl->buf);
-    free(nl);
-}
-
 size_t numlist_print(struct numlist_t *nl)
 {
+    /* Assuming that all decimal fractions on a line are with the same
+     * precision, prepare some variable that are used
+     */
+    /* Maximum length that the io buffer might need */
+    strbuf_grow(&iobuf, decfrac_prec + 2);
+
+    /* The rational that will be added for rounding */
+    mpz_ui_pow_ui(mpz1, 10, decfrac_prec);
+    mpz_mul_ui(mpz1, mpz1, 2);       /* 2*10^precision */
+    mpz_set_ui(mpq_numref(mpq2), 1); /* 1 */
+    mpz_set(mpq_denref(mpq2), mpz1); /* 1/(2*10^precision) */
+
+    /* The factor by which the remainder will be multiplied */
+    mpz_mul_ui(mpz1, mpz1, 5); /* 10^(precision + 1) */
+
     size_t i;
     for (i = 0; i < nl->len - 1; ++i) {
         num_print(nl->buf + i);
