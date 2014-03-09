@@ -2,4 +2,5 @@ acal
 *.[oa]
 *.txt
 foo*
-a.out
+*.out
+*.bak
