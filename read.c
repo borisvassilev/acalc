@@ -116,7 +116,7 @@ exit_status read_num_rest(
     } else if (c == '.') { /* maybe real */
         /* forget the dot; we deal with it otherwise */
         status = read_fractional(strbuf_len(&iobuf), next_c);
-        nt = REAL;
+        nt = DECFRAC;
     } else
         status = INTEGER_TRAILING_CHARS;
 
@@ -164,7 +164,7 @@ exit_status read_fractional(const size_t start, int *next_c)
     if (status != SUCCESS)
         return status;
     if (!isspace(*next_c) && *next_c != EOF)
-        return REAL_FRAC_TRAILING_CHARS;
+        return DECFRAC_FRAC_TRAILING_CHARS;
 
     size_t i = strbuf_len(&iobuf);
 

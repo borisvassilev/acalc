@@ -3,16 +3,16 @@
 #include "numstack.h"
 #include "strbuf.h"
 
-#define DEFAULT_REAL_PRECISION 5
+#define DEFAULT_DECFRAC_PRECISION 5
 
 struct numstack_t global_stack;
-size_t real_precision;
+size_t decfrac_prec;
 struct strbuf_t iobuf;
 
 void globals_init()
 {
     numstack_init(&global_stack);
-    real_precision = DEFAULT_REAL_PRECISION;
+    decfrac_prec = DEFAULT_DECFRAC_PRECISION;
     strbuf_init(&iobuf, 0);
 }
 

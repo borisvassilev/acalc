@@ -6,7 +6,7 @@
 enum numtype_e {
     INTEGER,
     RATIONAL,
-    REAL,
+    DECFRAC,
     NaN,
     NA
 };

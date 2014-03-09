@@ -43,11 +43,11 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
         }
         break;
 
-    case REAL:
+    case DECFRAC:
         mpq_init(np->num.q);
         mpq_set_str(np->num.q, buf, 10);
         mpq_canonicalize(np->num.q);
-        np->type = REAL;
+        np->type = DECFRAC;
         break;
 
     case NA:
@@ -64,7 +64,7 @@ void num_clear(struct number_t *np)
         mpz_clear(np->num.z);
         break;
     case RATIONAL:
-    case REAL:
+    case DECFRAC:
         mpq_clear(np->num.q);
         break;
     case NaN:
@@ -85,7 +85,7 @@ void num_print(struct number_t *np)
         gmp_printf("%Qd", np->num.q);
         break;
 
-    case REAL:
+    case DECFRAC:
         mpq_set(mpq1, np->num.q);  /* copy number */
         int neg = 0;
         if (mpq_sgn(mpq1) == -1) {
@@ -93,7 +93,7 @@ void num_print(struct number_t *np)
             putc('-', stdout);
         }
 
-        mpz_ui_pow_ui(mpz1, 10, real_precision);
+        mpz_ui_pow_ui(mpz1, 10, decfrac_prec);
         mpz_mul_ui(mpz1, mpz1, 2);       /* 2*10^precision */
         mpz_set_ui(mpq_numref(mpq2), 1); /* 1 */
         mpz_set(mpq_denref(mpq2), mpz1); /* 1/(2*10^precision) */
@@ -111,7 +111,7 @@ void num_print(struct number_t *np)
         mpz_mul(mpz3, mpz3, mpz1);
         mpz_tdiv_q(mpz3, mpz3, mpq_denref(mpq1));
 
-        strbuf_grow(&iobuf, real_precision + 2);
+        strbuf_grow(&iobuf, decfrac_prec + 2);
         char *start = strbuf_str(&iobuf, 0); /* for convenience */
         size_t written = gmp_sprintf(start, "%Zd", mpz3);
         char *end = start + written - 1;
@@ -123,7 +123,7 @@ void num_print(struct number_t *np)
 
         putc('.', stdout);
 
-        while (written++ < real_precision + 1)
+        while (written++ < decfrac_prec + 1)
             putc('0', stdout);
 
         while (start != end)
