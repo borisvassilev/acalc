@@ -123,8 +123,10 @@ void num_print(struct number_t *np)
         mpq_set(mpq1, np->num.q);  /* copy number */
         if (mpq_sgn(mpq1) == -1) { /* negative number */
             putc('-', stdout);
-            mpq_neg(mpq2, mpq2);
-        }
+            if (mpq_sgn(mpq2) == 1)
+                mpq_neg(mpq2, mpq2);
+        } else
+            mpq_abs(mpq2, mpq2);
 
         mpq_add(mpq1, mpq1, mpq2); /* add 1/(2*10^precision) */
 
@@ -140,16 +142,18 @@ void num_print(struct number_t *np)
         size_t written = gmp_sprintf(start, "%Zd", mpz3);
         char *end = start + written - 1;
 
+        /* remove trailing zeroes */
         while (end != start && *(end - 1) == '0')
             --end;
-        if (end == start)
+        if (end == start) /* there is nothing after the integer part */
             break;
-
         putc('.', stdout);
 
+        /* print out the necesssary 0s */
         while (written++ < decfrac_prec + 1)
             putc('0', stdout);
 
+        /* and print out the rest of the significant digits */
         while (start != end)
             putc(*start++, stdout);
 
