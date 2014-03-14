@@ -4,6 +4,7 @@
 typedef enum exit_status_e {
     SUCCESS = 0,
     END_OF_INPUT,
+    UNKNOWN_ACTION,
     DIGIT_EXPECTED,
     INTEGER_TRAILING_CHARS,
     RATIONAL_DENUM_TRAILING_CHARS,

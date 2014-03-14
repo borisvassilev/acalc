@@ -52,6 +52,38 @@ int buffer_leading_sign(int c)
 
 exit_status action(int c)
 {
+    if (strbuf_len(&iobuf) == 0) {
+        strbuf_putc(&iobuf, c);
+        c = getc(stdin);
+    }
+
+    c = eat_space_to_eol(c);
+
+    if (c == '\n' || c == EOF)
+        switch (iobuf.str[0])
+        {
+        case '+':
+            printf("add\n");
+            break;
+
+        case '-':
+            printf("subtract\n");
+            break;
+
+        case '*':
+            printf("multiply\n");
+            break;
+
+        case '/':
+            printf("divide\n");
+            break;
+
+        default:
+            return UNKNOWN_ACTION;
+        }
+    else
+        return UNKNOWN_ACTION;
+
     return SUCCESS;
 }
 
