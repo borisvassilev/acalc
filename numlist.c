@@ -138,7 +138,7 @@ void num_print(struct number_t *np)
         mpz_mul(mpz3, mpz3, mpz1);
         mpz_tdiv_q(mpz3, mpz3, mpq_denref(mpq1));
 
-        char *start = strbuf_str(&iobuf, 0); /* for convenience */
+        char *start = iobuf.str; /* for convenience */
         size_t written = gmp_sprintf(start, "%Zd", mpz3);
         char *end = start + written - 1;
 

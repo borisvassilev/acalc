@@ -57,10 +57,3 @@ void strbuf_reset(struct strbuf_t *sb)
     sb->str[0] = '\0';
 }
 
-char *strbuf_str(struct strbuf_t *sb, size_t offset)
-{
-    if (offset > sb->len - 1)
-        offset = sb->len - 1;
-
-    return sb->str + offset;
-}
