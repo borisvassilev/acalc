@@ -9,6 +9,7 @@
 #include "memwrap.h"
 #include "strbuf.h"
 #include "exit_status.h"
+#include "arith.h"
 
 int eat_space_to_eol(int);
 int buffer_leading_sign(int);
@@ -63,7 +64,7 @@ exit_status action(int c)
         switch (iobuf.str[0])
         {
         case '+':
-            printf("add\n");
+            apply_arithop(ADD);
             break;
 
         case '-':
