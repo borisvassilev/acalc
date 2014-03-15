@@ -72,7 +72,7 @@ exit_status action(int c)
             break;
 
         case '*':
-            printf("multiply\n");
+            apply_arithop(MUL);
             break;
 
         case '/':

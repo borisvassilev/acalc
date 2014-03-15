@@ -5,46 +5,80 @@
 #include "numlist.h"
 #include "numstack.h"
 
-void arith_add()
+void check_lengths(struct numlist_t *longer, struct numlist_t *shorter)
+{
+    if (longer->len % shorter->len != 0)
+        fprintf(stderr, "Warning: "
+                "Longer array length %zu not a multiple of "
+                "shorter array length %zu\n",
+                longer->len, shorter->len);
+}
+
+int na_or_nan(struct number_t *op1_res, struct number_t *op2)
+{
+    if (op1_res->type == NA || op2->type == NA) {
+        op1_res->type = NA;
+        return 1;
+    }
+
+    if (op1_res->type == NaN || op2->type == NaN) {
+        op1_res->type = NaN;
+        return 1;
+    }
+
+    return 0;
+}
+
+void set_result_type(struct number_t *op1_res, struct number_t *op2)
+{
+    if (op1_res->type == RATIONAL || op2->type == RATIONAL)
+        op1_res->type = RATIONAL;
+    else if (op1_res->type == DECFRAC || op2->type == DECFRAC)
+        op1_res->type = DECFRAC;
+    /* otherwise, both are INTEGER; leave it as it is */
+}
+
+void arith_binary_commutative(enum arithop_e op)
 {
     struct numlist_t *op1, *op2;
     numstack_pop(&global_stack, &op2);
     numstack_pop(&global_stack, &op1);
 
-    struct numlist_t *longer, *shorter;
+    struct numlist_t *l, *s; /* longer and shorter arrays */
     if (op1->len >= op2->len) {
-        longer = op1;
-        shorter = op2;
+        l = op1;
+        s = op2;
     } else {
-        longer = op2;
-        shorter = op1;
+        l = op2;
+        s = op1;
     }
 
-    if (longer->len % shorter->len != 0)
-        fprintf(stderr, "Warning: "
-                "Length of longer array (%zu) not a multiple of the "
-                "length of the shorter array (%zu)\n",
-                longer->len, shorter->len);
+    check_lengths(l, s);
 
     size_t il, is;
-    for (il = 0, is = 0; il != longer->len; ++il, ++is) {
-        if (is == shorter->len)
+    for (il = 0, is = 0; il != l->len; ++il, ++is) {
+        if (is == s->len)
             is = 0;
 
-        if (longer->buf[il].type == NA
-                || shorter->buf[is].type == NA)
-            longer->buf[il].type = NA;
-        else if (longer->buf[il].type == NaN
-                || shorter->buf[is].type == NaN)
-            longer->buf[il].type = NaN;
-        else
-            mpq_add(longer->buf[il].num,
-                    longer->buf[il].num,
-                    shorter->buf[is].num);
+        if (!na_or_nan(l->buf + il, s->buf + is)) {
+            set_result_type(l->buf + il, s->buf + is);
+
+            switch (op)
+            {
+            case ADD:
+                mpq_add(l->buf[il].num, l->buf[il].num, s->buf[is].num);
+                break;
+            case MUL:
+                mpq_mul(l->buf[il].num, l->buf[il].num, s->buf[is].num);
+                break;
+            default:
+                break;
+            }
+        }
     }
 
-    numlist_release(shorter);
-    numstack_push(&global_stack, longer);
+    numlist_release(s);
+    numstack_push(&global_stack, l);
 }
 /*
  * Make sure the necessary operands are there,
@@ -58,12 +92,12 @@ exit_status apply_arithop(enum arithop_e op)
 
     switch (op)
     {
-    /* binary operators */
-    case ADD:
-        arith_add();
+    /* binary commutative operators */
+    case ADD: case MUL:
+        arith_binary_commutative(op);
         break;
         
-    case SUB: case MUL: case DIV:
+    case SUB: case DIV:
         break;
     }
     return SUCCESS;
