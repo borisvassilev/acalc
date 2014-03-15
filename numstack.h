@@ -18,6 +18,6 @@ void numstack_release(struct numstack_t *);
 void numstack_top(struct numstack_t *, struct numlist_t **);
 void numstack_push(struct numstack_t *, struct numlist_t *);
 void numstack_pop(struct numstack_t *, struct numlist_t **);
-void numstack_pop_bottom(struct numstack_t *, struct numlist_t **);
+void numstack_pop_bot(struct numstack_t *, struct numlist_t **);
 
 #endif /* NUMSTACK_H */
