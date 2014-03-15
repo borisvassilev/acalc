@@ -27,12 +27,12 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
 
     case INTEGER:
         mpq_init(np->num);
-        mpq_set_str(np->num, buf, 10);
+        mpq_set_str(np->num, buf, 0);
         np->type = INTEGER;
         break;
 
     case RATIONAL:
-        mpq_set_str(mpq1, buf, 10);
+        mpq_set_str(mpq1, buf, 0);
         /* if the denumerator is 0, this is not a number */
         if (mpz_cmp_ui(mpq_denref(mpq1), 0) == 0) {
             np->type = NaN;
@@ -50,7 +50,7 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
 
     case DECFRAC:
         mpq_init(np->num);
-        mpq_set_str(np->num, buf, 10);
+        mpq_set_str(np->num, buf, 10); /* decimal fractions _are_ decimal */
         mpq_canonicalize(np->num);
         np->type = DECFRAC;
         break;
