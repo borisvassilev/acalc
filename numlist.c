@@ -26,8 +26,8 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
     switch (nt) {
 
     case INTEGER:
-        mpz_init(np->num.z);
-        mpz_set_str(np->num.z, buf, 10);
+        mpq_init(np->num);
+        mpq_set_str(np->num, buf, 10);
         np->type = INTEGER;
         break;
 
@@ -39,22 +39,19 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
             break;
         }
         mpq_canonicalize(mpq1);
+        mpq_init(np->num);
+        mpq_set(np->num, mpq1);
         /* if the denumerator is 1, this is an integer */
-        if (mpz_cmp_ui(mpq_denref(mpq1), 1) == 0) {
-            mpz_init(np->num.z);
-            mpz_set(np->num.z, mpq_numref(mpq1));
+        if (mpz_cmp_ui(mpq_denref(mpq1), 1) == 0)
             np->type = INTEGER;
-        } else {
-            mpq_init(np->num.q);
-            mpq_set(np->num.q, mpq1);
+        else
             np->type = RATIONAL;
-        }
         break;
 
     case DECFRAC:
-        mpq_init(np->num.q);
-        mpq_set_str(np->num.q, buf, 10);
-        mpq_canonicalize(np->num.q);
+        mpq_init(np->num);
+        mpq_set_str(np->num, buf, 10);
+        mpq_canonicalize(np->num);
         np->type = DECFRAC;
         break;
 
@@ -85,11 +82,9 @@ void num_clear(struct number_t *np)
 {
     switch (np->type) {
     case INTEGER:
-        mpz_clear(np->num.z);
-        break;
     case RATIONAL:
     case DECFRAC:
-        mpq_clear(np->num.q);
+        mpq_clear(np->num);
         break;
     case NaN:
     case NA:
@@ -112,15 +107,15 @@ void num_print(struct number_t *np)
     switch (np->type) {
 
     case INTEGER:
-        gmp_printf("%Zd", np->num.z);
+        gmp_printf("%Zd", mpq_numref(np->num));
         break;
 
     case RATIONAL:
-        gmp_printf("%Qd", np->num.q);
+        gmp_printf("%Qd", np->num);
         break;
 
     case DECFRAC:
-        mpq_set(mpq1, np->num.q);  /* copy number */
+        mpq_set(mpq1, np->num);  /* copy number */
         if (mpq_sgn(mpq1) == -1) { /* negative number */
             putc('-', stdout);
             if (mpq_sgn(mpq2) == 1)

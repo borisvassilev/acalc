@@ -11,14 +11,9 @@ enum numtype_e {
     NA
 };
 
-union numslot_u {
-    mpz_t z;
-    mpq_t q;
-};
-
 struct number_t {
     enum numtype_e type;
-    union numslot_u num;
+    mpq_t num;
 };
 
 struct numlist_t {
