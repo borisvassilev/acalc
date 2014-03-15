@@ -4,7 +4,7 @@
 #include "gmp.h"
 
 enum numtype_e {
-    INTEGER,
+    INTEGER, /* not used inside number lists */
     RATIONAL,
     DECFRAC,
     NaN,

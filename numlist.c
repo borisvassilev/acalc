@@ -28,7 +28,8 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
     case INTEGER:
         mpq_init(np->num);
         mpq_set_str(np->num, buf, 0);
-        np->type = INTEGER;
+        /* if the denumerator is 1, this is an integer, implicitly */
+        np->type = RATIONAL;
         break;
 
     case RATIONAL:
@@ -41,11 +42,8 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
         mpq_canonicalize(mpq1);
         mpq_init(np->num);
         mpq_set(np->num, mpq1);
-        /* if the denumerator is 1, this is an integer */
-        if (mpz_cmp_ui(mpq_denref(mpq1), 1) == 0)
-            np->type = INTEGER;
-        else
-            np->type = RATIONAL;
+        /* if the denumerator is 1, this is an integer, implicitly */
+        np->type = RATIONAL;
         break;
 
     case DECFRAC:
@@ -81,7 +79,7 @@ void numlist_grow(struct numlist_t *nl)
 void num_clear(struct number_t *np)
 {
     switch (np->type) {
-    case INTEGER:
+    case INTEGER: /* should not happen, but doesn't hurt */
     case RATIONAL:
     case DECFRAC:
         mpq_clear(np->num);
@@ -106,7 +104,7 @@ void num_print(struct number_t *np)
 {
     switch (np->type) {
 
-    case INTEGER:
+    case INTEGER: /* should not happen */
         gmp_printf("%Zd", mpq_numref(np->num));
         break;
 
