@@ -4,21 +4,16 @@
 #include "gmp.h"
 
 enum numtype_e {
-    INTEGER,
+    INTEGER, /* not used inside number lists */
     RATIONAL,
     DECFRAC,
     NaN,
     NA
 };
 
-union numslot_u {
-    mpz_t z;
-    mpq_t q;
-};
-
 struct number_t {
     enum numtype_e type;
-    union numslot_u num;
+    mpq_t num;
 };
 
 struct numlist_t {

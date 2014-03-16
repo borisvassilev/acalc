@@ -9,6 +9,7 @@
 #include "memwrap.h"
 #include "strbuf.h"
 #include "exit_status.h"
+#include "arith.h"
 
 int eat_space_to_eol(int);
 int buffer_leading_sign(int);
@@ -52,6 +53,30 @@ int buffer_leading_sign(int c)
 
 exit_status action(int c)
 {
+    if (strbuf_len(&iobuf) == 0) {
+        strbuf_putc(&iobuf, c);
+        c = getc(stdin);
+    }
+
+    c = eat_space_to_eol(c);
+
+    if (c == '\n' || c == EOF)
+        switch (iobuf.str[0])
+        {
+        case '+': apply_arithop(ADD); break;
+
+        case '-': apply_arithop(SUB); break;
+
+        case '*': apply_arithop(MUL); break;
+
+        case '/': apply_arithop(DIV); break;
+
+        default:
+            return UNKNOWN_ACTION;
+        }
+    else
+        return UNKNOWN_ACTION;
+
     return SUCCESS;
 }
 

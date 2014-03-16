@@ -19,6 +19,7 @@ void numlist_init(struct numlist_t **nl)
 
 void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
 {
+    mpq_init(np->num);
     /* skip leading plus */
     if (*buf == '+')
         ++buf;
@@ -26,35 +27,27 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
     switch (nt) {
 
     case INTEGER:
-        mpz_init(np->num.z);
-        mpz_set_str(np->num.z, buf, 10);
-        np->type = INTEGER;
+        mpq_set_str(np->num, buf, 0);
+        /* if the denumerator is 1, this is an integer, implicitly */
+        np->type = RATIONAL;
         break;
 
     case RATIONAL:
-        mpq_set_str(mpq1, buf, 10);
+        mpq_set_str(mpq1, buf, 0);
         /* if the denumerator is 0, this is not a number */
         if (mpz_cmp_ui(mpq_denref(mpq1), 0) == 0) {
             np->type = NaN;
             break;
         }
         mpq_canonicalize(mpq1);
-        /* if the denumerator is 1, this is an integer */
-        if (mpz_cmp_ui(mpq_denref(mpq1), 1) == 0) {
-            mpz_init(np->num.z);
-            mpz_set(np->num.z, mpq_numref(mpq1));
-            np->type = INTEGER;
-        } else {
-            mpq_init(np->num.q);
-            mpq_set(np->num.q, mpq1);
-            np->type = RATIONAL;
-        }
+        mpq_set(np->num, mpq1);
+        /* if the denumerator is 1, this is an integer, implicitly */
+        np->type = RATIONAL;
         break;
 
     case DECFRAC:
-        mpq_init(np->num.q);
-        mpq_set_str(np->num.q, buf, 10);
-        mpq_canonicalize(np->num.q);
+        mpq_set_str(np->num, buf, 10); /* decimal fractions _are_ decimal */
+        mpq_canonicalize(np->num);
         np->type = DECFRAC;
         break;
 
@@ -81,27 +74,11 @@ void numlist_grow(struct numlist_t *nl)
     nl->buf = xrealloc(nl->buf, nl->alloc * sizeof (struct number_t));
 }
 
-void num_clear(struct number_t *np)
-{
-    switch (np->type) {
-    case INTEGER:
-        mpz_clear(np->num.z);
-        break;
-    case RATIONAL:
-    case DECFRAC:
-        mpq_clear(np->num.q);
-        break;
-    case NaN:
-    case NA:
-        break;
-    }
-}
-
 void numlist_release(struct numlist_t *nl)
 {
     size_t i;
     for (i = 0; i < nl->len; ++i)
-        num_clear(nl->buf + i);
+        mpq_clear(nl->buf[i].num);
 
     free(nl->buf);
     free(nl);
@@ -111,16 +88,16 @@ void num_print(struct number_t *np)
 {
     switch (np->type) {
 
-    case INTEGER:
-        gmp_printf("%Zd", np->num.z);
+    case INTEGER: /* should not happen */
+        gmp_printf("%Zd", mpq_numref(np->num));
         break;
 
     case RATIONAL:
-        gmp_printf("%Qd", np->num.q);
+        gmp_printf("%Qd", np->num);
         break;
 
     case DECFRAC:
-        mpq_set(mpq1, np->num.q);  /* copy number */
+        mpq_set(mpq1, np->num);  /* copy number */
         if (mpq_sgn(mpq1) == -1) { /* negative number */
             putc('-', stdout);
             if (mpq_sgn(mpq2) == 1)
