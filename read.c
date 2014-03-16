@@ -53,7 +53,7 @@ int buffer_leading_sign(int c)
 
 exit_status action(int c)
 {
-    if (strbuf_len(&iobuf) == 0) {
+    if (iobuf.len == 0) {
         strbuf_putc(&iobuf, c);
         c = getc(stdin);
     }
