@@ -31,11 +31,12 @@ int na_or_nan(struct number_t *op1_res, struct number_t *op2)
 
 void set_result_type(struct number_t *op1_res, struct number_t *op2)
 {
-    if (op1_res->type == RATIONAL || op2->type == RATIONAL)
-        op1_res->type = RATIONAL;
-    else if (op1_res->type == DECFRAC || op2->type == DECFRAC)
+    if (op1_res->type == DECFRAC || op2->type == DECFRAC)
         op1_res->type = DECFRAC;
-    /* otherwise, both are INTEGER; leave it as it is */
+    /* implicit:
+    else
+        op1_res->type = RATIONAL;
+    */
 }
 
 void arith_binary_commutative(enum arithop_e op)
@@ -61,7 +62,6 @@ void arith_binary_commutative(enum arithop_e op)
             is = 0;
 
         if (!na_or_nan(l->buf + il, s->buf + is)) {
-            set_result_type(l->buf + il, s->buf + is);
 
             switch (op)
             {
@@ -74,6 +74,8 @@ void arith_binary_commutative(enum arithop_e op)
             default:
                 break;
             }
+
+            set_result_type(l->buf + il, s->buf + is);
         }
     }
 

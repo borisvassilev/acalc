@@ -19,6 +19,7 @@ void numlist_init(struct numlist_t **nl)
 
 void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
 {
+    mpq_init(np->num);
     /* skip leading plus */
     if (*buf == '+')
         ++buf;
@@ -26,7 +27,6 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
     switch (nt) {
 
     case INTEGER:
-        mpq_init(np->num);
         mpq_set_str(np->num, buf, 0);
         /* if the denumerator is 1, this is an integer, implicitly */
         np->type = RATIONAL;
@@ -40,14 +40,12 @@ void num_init_set(struct number_t *np, const enum numtype_e nt, char *buf)
             break;
         }
         mpq_canonicalize(mpq1);
-        mpq_init(np->num);
         mpq_set(np->num, mpq1);
         /* if the denumerator is 1, this is an integer, implicitly */
         np->type = RATIONAL;
         break;
 
     case DECFRAC:
-        mpq_init(np->num);
         mpq_set_str(np->num, buf, 10); /* decimal fractions _are_ decimal */
         mpq_canonicalize(np->num);
         np->type = DECFRAC;
@@ -76,25 +74,11 @@ void numlist_grow(struct numlist_t *nl)
     nl->buf = xrealloc(nl->buf, nl->alloc * sizeof (struct number_t));
 }
 
-void num_clear(struct number_t *np)
-{
-    switch (np->type) {
-    case INTEGER: /* should not happen, but doesn't hurt */
-    case RATIONAL:
-    case DECFRAC:
-        mpq_clear(np->num);
-        break;
-    case NaN:
-    case NA:
-        break;
-    }
-}
-
 void numlist_release(struct numlist_t *nl)
 {
     size_t i;
     for (i = 0; i < nl->len; ++i)
-        num_clear(nl->buf + i);
+        mpq_clear(nl->buf[i].num);
 
     free(nl->buf);
     free(nl);
