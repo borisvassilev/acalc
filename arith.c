@@ -5,13 +5,13 @@
 #include "numlist.h"
 #include "numstack.h"
 
-void check_lengths(struct numlist_t *longer, struct numlist_t *shorter)
+void check_lengths(const size_t longer, const size_t shorter)
 {
-    if (longer->len % shorter->len != 0)
+    if (longer % shorter != 0)
         fprintf(stderr, "Warning: "
                 "Longer array length %zu not a multiple of "
                 "shorter array length %zu\n",
-                longer->len, shorter->len);
+                longer, shorter);
 }
 
 int na_or_nan(struct number_t *op1_res, struct number_t *op2)
@@ -39,48 +39,67 @@ void set_result_type(struct number_t *op1_res, struct number_t *op2)
     */
 }
 
-void arith_binary_commutative(enum arithop_e op)
+void arith_binary(enum arithop_e op)
 {
-    struct numlist_t *op1, *op2;
+    struct numlist_t *op1, *op2, *oplong, *opshort;
+    size_t i1, i2, *ilong, *ishort;
+
     numstack_pop(&global_stack, &op2);
     numstack_pop(&global_stack, &op1);
 
-    struct numlist_t *l, *s; /* longer and shorter arrays */
     if (op1->len >= op2->len) {
-        l = op1;
-        s = op2;
+        check_lengths(op1->len, op2->len);
+        oplong = op1;
+        opshort = op2;
+        ilong = &i1;
+        ishort = &i2;
     } else {
-        l = op2;
-        s = op1;
+        check_lengths(op2->len, op1->len);
+        oplong = op2;
+        opshort = op1;
+        ilong = &i2;
+        ishort = &i1;
     }
 
-    check_lengths(l, s);
+    for (i1 = 0, i2 = 0; *ilong != oplong->len; ++i1, ++i2) {
+        if (*ishort == opshort->len)
+            *ishort = 0;
 
-    size_t il, is;
-    for (il = 0, is = 0; il != l->len; ++il, ++is) {
-        if (is == s->len)
-            is = 0;
-
-        if (!na_or_nan(l->buf + il, s->buf + is)) {
+        if (!na_or_nan(op1->buf + i1, op2->buf + i2)) {
 
             switch (op)
             {
             case ADD:
-                mpq_add(l->buf[il].num, l->buf[il].num, s->buf[is].num);
+                mpq_add(oplong->buf[*ilong].num,
+                        op1->buf[i1].num,
+                        op2->buf[i2].num);
                 break;
+
+            case SUB:
+                mpq_sub(oplong->buf[*ilong].num,
+                        op1->buf[i1].num,
+                        op2->buf[i2].num);
+                break;
+
             case MUL:
-                mpq_mul(l->buf[il].num, l->buf[il].num, s->buf[is].num);
+                mpq_mul(oplong->buf[*ilong].num,
+                        op1->buf[i1].num,
+                        op2->buf[i2].num);
                 break;
-            default:
+
+            case DIV:
+                mpq_div(oplong->buf[*ilong].num,
+                        op1->buf[i1].num,
+                        op2->buf[i2].num);
                 break;
             }
 
-            set_result_type(l->buf + il, s->buf + is);
+            set_result_type(oplong->buf + *ilong, opshort->buf + *ishort);
         }
     }
 
-    numlist_release(s);
-    numstack_push(&global_stack, l);
+    numlist_release(opshort);
+    numstack_push(&global_stack, oplong);
 }
 /*
  * Make sure the necessary operands are there,
@@ -94,12 +113,9 @@ exit_status apply_arithop(enum arithop_e op)
 
     switch (op)
     {
-    /* binary commutative operators */
-    case ADD: case MUL:
-        arith_binary_commutative(op);
-        break;
-        
-    case SUB: case DIV:
+    /* binary operators */
+    case ADD: case SUB: case MUL: case DIV:
+        arith_binary(op);
         break;
     }
     return SUCCESS;

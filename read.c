@@ -63,21 +63,13 @@ exit_status action(int c)
     if (c == '\n' || c == EOF)
         switch (iobuf.str[0])
         {
-        case '+':
-            apply_arithop(ADD);
-            break;
+        case '+': apply_arithop(ADD); break;
 
-        case '-':
-            printf("subtract\n");
-            break;
+        case '-': apply_arithop(SUB); break;
 
-        case '*':
-            apply_arithop(MUL);
-            break;
+        case '*': apply_arithop(MUL); break;
 
-        case '/':
-            printf("divide\n");
-            break;
+        case '/': apply_arithop(DIV); break;
 
         default:
             return UNKNOWN_ACTION;
