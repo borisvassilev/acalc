@@ -1,6 +1,5 @@
 acal
 *.[oa]
-*.txt
 foo*
 *.out
 *.bak
