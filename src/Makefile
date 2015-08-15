@@ -1,5 +1,4 @@
-CC=gcc
-CFLAGS=-Wall -g -lgmp
+CFLAGS=-Wall -g -lgmp -O2
 
 objects = main.o \
 	  tmpvars.o \
