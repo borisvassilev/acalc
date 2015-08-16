@@ -1,4 +1,5 @@
-CFLAGS=-Wall -g -lgmp -O2
+CFLAGS += -Wall -Og
+LDLIBS += -lgmp
 
 objects = main.o \
 	  tmpvars.o \
@@ -10,8 +11,8 @@ objects = main.o \
 	  globals.o \
 	  arith.o
 
-acal: $(objects)
-	$(CC) -o acal $(CFLAGS) $(objects)
+acalc: $(objects)
+	$(CC) -o acalc $(objects) $(LDLIBS)
 
 main.o: main.c read.h globals.h tmpvars.h exit_status.h
 
@@ -34,5 +35,5 @@ arith.o: arith.c arith.h exit_status.h numlist.h numstack.h
 
 .PHONY: clean
 clean:
-	rm acal $(objects)
+	rm acalc $(objects)
 
